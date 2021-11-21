@@ -1,7 +1,6 @@
-import { renderComponent } from '../react-dom/render'
-
+import { enqueueSetState } from './set-state-queue'
 class Component {
-    constructor( props = {} ) {
+    constructor(props = {}) {
         this.isReactComponent = true;
 
         this.state = {};
@@ -9,9 +8,8 @@ class Component {
         Object.freeze(this.props);
     }
 
-    setState( nextState ) {
-        Object.assign( this.state, nextState );
-        renderComponent( this );
+    setState(nextState) {
+        enqueueSetState(nextState, this);
     }
 }
 

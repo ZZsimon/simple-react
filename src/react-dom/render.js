@@ -1,5 +1,6 @@
 import Component from '../react/component'
 import { setAttribute } from './dom'
+import { diff } from './diff'
 
 /**
  * 
@@ -47,15 +48,15 @@ function setComponentProps( component, props ) {
  * 有base的话，替换当前base所在的元素节点
  */
 export function renderComponent( component ) {
-
     let base;
     const renderer = component.render();
-    console.log(renderer, 'renderer')
     if ( component.base && component.componentWillUpdate ) {
         component.componentWillUpdate();
     }
 
-    base = _render( renderer );
+    // base = _render( renderer );
+
+    base = diff( component.base, renderer );
 
     if ( component.base ) {
         if ( component.componentDidUpdate ) component.componentDidUpdate();
@@ -63,9 +64,18 @@ export function renderComponent( component ) {
         component.componentDidMount();
     }
 
-    if ( component.base && component.base.parentNode ) {
-        component.base.parentNode.replaceChild( base, component.base );
-    }
+    // if ( component.base && component.base.parentNode ) {
+        // 此时 component.base 是<h1>1</h2>
+        // base是 <h1>2</h2>
+
+        // 没替换前DOM中存在的是<h1>1</h1>
+        // 因此 component.base.parentNode 是有值的
+        // 替换完后 DOM中存在的是<h1>2</h1>
+        // 因此这个时候 component.base.parentNode 是没有值的
+        // 因为 component.base 是 h1>1</h2> 它的父元素已经不存在了
+
+        // component.base.parentNode.replaceChild( base, component.base );
+    // }
 
     component.base = base;
     base._component = component;
@@ -75,8 +85,8 @@ export function renderComponent( component ) {
 /**
  * 
  * @param {虚拟DOM节点} vnode 
- * @returns 
- * 返回一个真实DOM节点
+ * @returns 返回一个真实DOM节点
+ * 
  */
 function _render( vnode ) {
     if ( vnode === undefined || vnode === null || typeof vnode === 'boolean' ) vnode = '';
@@ -92,9 +102,13 @@ function _render( vnode ) {
     // babel会将组件转换为一个 方法
     if ( typeof vnode.tag === 'function' ) {
 
-        // component是一个react Component类的实例
+        // 创建react Component类的实例
         const component = createComponent( vnode.tag, vnode.attrs );
-        // 给实例添加属性，执行方法
+        // 给实例添加属性，并按照顺序执行componentWillMount、componentWillReceiveProps
+        // 执行 renderComponent() 方法，做了这些事情：
+        //  1.执行componentWillUpdate、componentDidUpdate、componentDidMount
+        //  2.递归执行_render方法，最终返回一个DOM元素，赋值给component.base属性
+        //  这样子，外层_render方法中可以通过获取 component.base 来返回DOM元素
         setComponentProps( component, vnode.attrs );
 
         // component.base肯定是一个DOM元素
